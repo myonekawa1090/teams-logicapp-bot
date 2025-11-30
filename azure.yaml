@@ -179,5 +179,9 @@ hooks:
             if [ -f "$packagePath" ]; then rm -f "$packagePath"; fi
             (cd "./templates/teams-app" && zip -j "../../artifacts/teams-app.zip" manifest.json color.png outline.png)
             echo "Teams App package created at: $packagePath"
+
+            # Remove manifest.json after packaging (contains sensitive info)
+            rm -f "$manifestPath"
+            echo "Removed temporary manifest.json file"
           fi
         fi
