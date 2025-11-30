@@ -1,4 +1,4 @@
-@description('Base name for all resources')
+@description('Prefix for resource names (e.g., mybot creates mybot-appservice, mybot-plan, mybot-identity)')
 param baseName string
 
 @description('Location for all resources')
