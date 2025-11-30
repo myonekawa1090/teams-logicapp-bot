@@ -1,0 +1,183 @@
+# Azure Developer CLI (azd) configuration for Teams Bot Python
+# name: teams-bot-python
+# metadata:
+#   template: teams-bot-python@0.0.1-beta
+
+services:
+  bot:
+    project: ./src
+    language: python
+    host: appservice
+
+infra:
+  provider: bicep
+  path: ./infra
+
+hooks:
+  preprovision:
+    posix:
+      shell: sh
+      run: |
+        echo "Checking prerequisites..."
+
+        # Check if setup-bot-config.sh has been run
+        # We check for the presence of BOT_NAME_SHORT as an indicator
+        infraOutputs=$(azd env get-values --output json)
+        botNameShort=$(echo "$infraOutputs" | jq -r '.BOT_NAME_SHORT // empty')
+
+        if [ -z "$botNameShort" ]; then
+          echo ""
+          echo "=========================================="
+          echo "ERROR: Bot configuration not found"
+          echo "=========================================="
+          echo ""
+          echo "Please run './setup-bot-config.sh' before executing 'azd up'"
+          echo "This script will configure your Teams bot metadata."
+          echo ""
+          exit 1
+        fi
+
+        echo "Prerequisites check passed!"
+  postprovision:
+    posix:
+      shell: sh
+      run: |
+        echo "Deploying Logic App workflows..."
+        
+        infraOutputs=$(azd env get-values --output json)
+        logicAppName=$(echo "$infraOutputs" | jq -r '.LOGIC_APP_STANDARD_NAME // empty')
+        resourceGroup=$(echo "$infraOutputs" | jq -r '.AZURE_RESOURCE_GROUP // empty')
+        webAppName=$(echo "$infraOutputs" | jq -r '.WEB_APP_NAME // empty')
+        
+        if [ -n "$logicAppName" ] && [ -n "$resourceGroup" ]; then
+          # Create Logic App package
+          echo "Creating Logic App package..."
+          logicAppPackagePath="./artifacts/logicapp.zip"
+          mkdir -p "./artifacts"
+          if [ -f "$logicAppPackagePath" ]; then rm -f "$logicAppPackagePath"; fi
+          (cd "./templates/logicapp" && zip -r "../../artifacts/logicapp.zip" .)
+          
+          # Deploy Logic App workflows
+          echo "Deploying workflows to Logic App..."
+          az webapp deploy \
+            --resource-group "$resourceGroup" \
+            --name "$logicAppName" \
+            --src-path ./artifacts/logicapp.zip
+          
+          # Wait for the workflow to be ready with retry logic
+          echo "Waiting for workflow to initialize..."
+          maxRetries=12
+          retryCount=0
+          triggerUrl=""
+          
+          while [ $retryCount -lt $maxRetries ] && [ -z "$triggerUrl" ]; do
+            sleep 10
+            retryCount=$((retryCount + 1))
+            echo "Attempt $retryCount/$maxRetries: Getting Logic App trigger URL..."
+            
+            triggerUrl=$(az rest \
+              --method post \
+              --uri "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/$resourceGroup/providers/Microsoft.Web/sites/$logicAppName/hostruntime/runtime/webhooks/workflow/api/management/workflows/processItem/triggers/manual/listCallbackUrl?api-version=2022-03-01" \
+              --query value -o tsv 2>/dev/null || echo "")
+            
+            if [ -n "$triggerUrl" ]; then
+              echo "Logic App trigger URL obtained successfully"
+              break
+            else
+              if [ $retryCount -lt $maxRetries ]; then
+                echo "Workflow not ready yet, waiting..."
+              fi
+            fi
+          done
+          
+          if [ -n "$triggerUrl" ]; then
+            # Set the LOGICAPP_ENDPOINT environment variable for azd
+            azd env set LOGICAPP_ENDPOINT "$triggerUrl"
+            
+            # Update App Service configuration
+            echo "Configuring App Service with Logic App endpoint..."
+            az webapp config appsettings set \
+              --resource-group "$resourceGroup" \
+              --name "$webAppName" \
+              --settings LOGICAPP_ENDPOINT="$triggerUrl"
+            
+            echo "Logic App endpoint configured successfully"
+          else
+            echo "Warning: Could not retrieve Logic App trigger URL after $maxRetries attempts"
+            echo "You may need to manually configure LOGICAPP_ENDPOINT in your App Service"
+          fi
+        fi
+  postdeploy:
+    posix:
+      shell: sh
+      run: |
+        echo "Generating Teams App manifest..."
+
+        infraOutputs=$(azd env get-values --output json)
+        webAppUrl=$(echo "$infraOutputs" | jq -r '.WEB_APP_URL // empty')
+        botAppId=$(echo "$infraOutputs" | jq -r '.MANAGED_IDENTITY_CLIENT_ID // empty')
+
+        if [ -n "$webAppUrl" ] && [ -n "$botAppId" ]; then
+          botDomain=$(echo "$webAppUrl" | sed 's|https://||' | sed 's|/.*||')
+          templatePath="./templates/teams-app/manifest.template.json"
+          manifestPath="./templates/teams-app/manifest.json"
+
+          # Use environment variables with defaults
+          # To customize, run: azd env set BOT_NAME_SHORT "MyBot"
+          
+          echo ""
+          echo "=========================================="
+          echo "Teams Bot Configuration"
+          echo "=========================================="
+          
+          botNameShort=${BOT_NAME_SHORT:-"GenBot"}
+          botNameFull=${BOT_NAME_FULL:-"Generic Teams Bot"}
+          descriptionShort=${DESCRIPTION_SHORT:-"Generic Teams bot"}
+          descriptionFull=${DESCRIPTION_FULL:-"Generic Teams bot"}
+          developerName=${DEVELOPER_NAME:-"Your Organization"}
+          developerWebsite=${DEVELOPER_WEBSITE:-"https://your-website.com"}
+          privacyUrl=${PRIVACY_URL:-"https://your-website.com/privacy"}
+          termsUrl=${TERMS_URL:-"https://your-website.com/terms"}
+          accentColor=${ACCENT_COLOR:-"#FFFFFF"}
+
+          if [ -f "$templatePath" ]; then
+            # Escape special characters for sed
+            botNameShortEsc=$(echo "$botNameShort" | sed 's/[\/&]/\\&/g')
+            botNameFullEsc=$(echo "$botNameFull" | sed 's/[\/&]/\\&/g')
+            descriptionShortEsc=$(echo "$descriptionShort" | sed 's/[\/&]/\\&/g')
+            descriptionFullEsc=$(echo "$descriptionFull" | sed 's/[\/&]/\\&/g')
+            developerNameEsc=$(echo "$developerName" | sed 's/[\/&]/\\&/g')
+            developerWebsiteEsc=$(echo "$developerWebsite" | sed 's/[\/&]/\\&/g')
+            privacyUrlEsc=$(echo "$privacyUrl" | sed 's/[\/&]/\\&/g')
+            termsUrlEsc=$(echo "$termsUrl" | sed 's/[\/&]/\\&/g')
+            accentColorEsc=$(echo "$accentColor" | sed 's/[\/&]/\\&/g')
+
+            sed -e "s/{{TEAMS_APP_ID}}/$botAppId/g" \
+                -e "s/{{BOT_APP_ID}}/$botAppId/g" \
+                -e "s/{{BOT_DOMAIN}}/$botDomain/g" \
+                -e "s/{{BOT_NAME_SHORT}}/$botNameShortEsc/g" \
+                -e "s/{{BOT_NAME_FULL}}/$botNameFullEsc/g" \
+                -e "s/{{DESCRIPTION_SHORT}}/$descriptionShortEsc/g" \
+                -e "s/{{DESCRIPTION_FULL}}/$descriptionFullEsc/g" \
+                -e "s/{{DEVELOPER_NAME}}/$developerNameEsc/g" \
+                -e "s/{{DEVELOPER_WEBSITE}}/$developerWebsiteEsc/g" \
+                -e "s/{{DEVELOPER_PRIVACY_URL}}/$privacyUrlEsc/g" \
+                -e "s/{{DEVELOPER_TERMS_URL}}/$termsUrlEsc/g" \
+                -e "s/{{ACCENT_COLOR}}/$accentColorEsc/g" \
+                "$templatePath" > "$manifestPath"
+            echo "Teams manifest generated at: $manifestPath"
+            echo ""
+            echo "Configuration Summary:"
+            echo "  Bot Name: $botNameShort ($botNameFull)"
+            echo "  Description: $descriptionShort"
+            echo "  Developer: $developerName"
+            echo "  Accent Color: $accentColor"
+
+            # Create Teams App package
+            packagePath="./artifacts/teams-app.zip"
+            mkdir -p "./artifacts"
+            if [ -f "$packagePath" ]; then rm -f "$packagePath"; fi
+            (cd "./templates/teams-app" && zip -j "../../artifacts/teams-app.zip" manifest.json color.png outline.png)
+            echo "Teams App package created at: $packagePath"
+          fi
+        fi
