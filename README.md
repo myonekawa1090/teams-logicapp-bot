@@ -129,13 +129,3 @@ Edit the `create_input_card` method in `src/handlers/teams_handler.py` to add ne
 1. Add new workflow definitions in `templates/logicapp/` directory (following the `processItem` structure)
 2. Modify `src/handlers/logicapp_handler.py` to change the payload structure or add new Logic App integrations
 3. Update the deployment to include your new workflows
-
-## Configuration
-
-| Environment Variable | Description | Required |
-|---------------------|-------------|----------|
-| `MicrosoftAppId` | Bot Framework App ID | Yes |
-| `MicrosoftAppPassword` | Bot Framework App Password | Yes |
-| `MicrosoftAppType` | Bot type (usually MultiTenant) | Yes |
-| `MicrosoftAppTenantId` | Azure AD Tenant ID | Yes |
-| `LOGICAPP_ENDPOINT` | Logic App HTTP trigger URL | Yes |
