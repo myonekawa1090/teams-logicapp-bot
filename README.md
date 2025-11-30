@@ -29,7 +29,7 @@ User → Teams Bot → Adaptive Card → Submit → Logic App → Response
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd CRTBot
+cd teams-logicapp-bot
 
 # Create virtual environment
 python -m venv venv
@@ -61,7 +61,7 @@ The deployment will automatically:
 ## Project Structure
 
 ```
-CRTBot/
+teams-logicapp-bot/
 ├── src/
 │   ├── app.py                    # Main application entry point
 │   ├── bot.py                    # Bot logic and command handling
