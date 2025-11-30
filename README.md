@@ -52,6 +52,22 @@ The deployment will automatically:
 - Deploy the Logic App workflow
 - Configure the Logic App endpoint in the App Service
 - Deploy the bot application
+- Generate the Teams app package in `artifacts/teams-app.zip`
+
+### 3. Upload to Microsoft Teams
+
+After deployment completes, upload the bot to Teams:
+
+1. Navigate to the `artifacts/` directory in your project
+2. Locate the `teams-app.zip` file (generated during deployment)
+3. Open Microsoft Teams
+4. Go to **Apps** in the left sidebar
+5. Click **Manage your apps** (or **Upload an app**)
+6. Select **Upload a custom app**
+7. Choose the `teams-app.zip` file
+8. Click **Add** to install the bot to your Teams environment
+
+You can now start a chat with the bot or mention it in a channel to use the `create` command.
 
 ## Azure Resources
 
