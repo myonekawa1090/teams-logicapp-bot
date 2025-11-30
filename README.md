@@ -17,26 +17,16 @@ User → Teams Bot → Adaptive Card → Submit → Logic App → Response
 
 ## Prerequisites
 
-- Python 3.11+
 - Azure subscription
-- Azure CLI
-- Azure Developer CLI (azd)
+- Azure Developer CLI (azd) - [Install here](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
 
 ## Quick Start
 
-### 1. Clone and Setup
+### 1. Clone the Repository
 
 ```bash
-# Clone the repository
 git clone <your-repo-url>
 cd teams-logicapp-bot
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r src/requirements.txt
 ```
 
 ### 2. Deploy to Azure
