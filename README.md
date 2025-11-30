@@ -140,6 +140,19 @@ Edit `src/bot.py` and add command handlers in the `on_message_activity` method. 
 
 Edit the `create_input_card` method in `src/handlers/teams_handler.py` to add new form fields, change layouts, or create entirely new Adaptive Cards for different commands.
 
+### Customize Teams Bot Icons
+
+To change the bot's appearance in Teams, replace the icon files in `templates/teams-app/`:
+
+1. **color.png** - Full color icon displayed in the Teams app catalog and chat headers
+2. **outline.png** - Monochrome outline icon used in the Teams left rail and app bar
+
+Replace these files with your desired images following the [official Microsoft Teams icon guidelines](https://learn.microsoft.com/en-us/microsoftteams/platform/resources/schema/manifest-schema#icons):
+- **color.png**: 192x192 pixels, full color
+- **outline.png**: 32x32 pixels, transparent background with white outline
+
+After replacing the icons, redeploy using `azd up` to regenerate the Teams app package with your custom icons.
+
 ### Extend Logic App Workflows
 
 1. Add new workflow definitions in `templates/logicapp/` directory (following the `processItem` structure)
