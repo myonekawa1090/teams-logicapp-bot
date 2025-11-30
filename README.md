@@ -27,7 +27,7 @@ User → Teams Bot → Adaptive Card → Submit → Logic App → Response
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone <this-repo-url>
 cd teams-logicapp-bot
 ```
 
