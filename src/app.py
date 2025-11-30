@@ -3,8 +3,8 @@
 # Licensed under the MIT License.
 
 """
-CRT Bot メインアプリケーション
-Flask/aiohttp アプリケーションエントリーポイントと Bot Framework 統合
+CRT Bot Main Application
+Flask/aiohttp application entry point with Bot Framework integration
 """
 
 import sys
@@ -21,25 +21,25 @@ from botbuilder.schema import Activity, ActivityTypes
 from config import DefaultConfig
 from bot import Bot
 
-# 設定とアダプターの初期化
+# Initialize configuration and adapter
 CONFIG = DefaultConfig()
 ADAPTER = CloudAdapter(ConfigurationBotFrameworkAuthentication(CONFIG))
 
 
 async def on_error(context: TurnContext, error: Exception):
     """
-    Bot のエラーハンドラー
+    Bot error handler
 
     Args:
-        context: Bot Framework のターンコンテキスト
-        error: 発生したエラー
+        context: Bot Framework turn context
+        error: Error that occurred
     """
     print(f"\n [on_turn_error] unhandled error: {error}", file=sys.stderr)
     traceback.print_exc()
     await context.send_activity("The bot encountered an error or bug.")
     await context.send_activity("To continue to run this bot, please fix the bot source code.")
 
-    # エミュレーターの場合はトレースアクティビティを送信
+    # Send trace activity if using emulator
     if context.activity.channel_id == "emulator":
         trace_activity = Activity(
             label="TurnError",
@@ -54,37 +54,37 @@ async def on_error(context: TurnContext, error: Exception):
 
 ADAPTER.on_turn_error = on_error
 
-# Bot インスタンスを作成
+# Create Bot instance
 BOT = Bot()
 
 
 async def messages(req: Request) -> Response:
     """
-    Bot Framework メッセージエンドポイント
+    Bot Framework message endpoint
 
     Args:
-        req: HTTP リクエスト
+        req: HTTP request
 
     Returns:
-        HTTP レスポンス
+        HTTP response
     """
     return await ADAPTER.process(req, BOT)
 
 
 async def root(req: Request) -> Response:
     """
-    ルートエンドポイント（ヘルスチェック用）
+    Root endpoint (for health check)
 
     Args:
-        req: HTTP リクエスト
+        req: HTTP request
 
     Returns:
-        HTTP レスポンス
+        HTTP response
     """
     return Response(text="Teams Task Management Bot with Azure DevOps Integration", content_type='text/html')
 
 
-# aiohttp アプリケーションを作成
+# Create aiohttp application
 APP = web.Application(middlewares=[aiohttp_error_middleware])
 APP.router.add_post("/api/messages", messages)
 APP.router.add_get("/", root)
