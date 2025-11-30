@@ -35,8 +35,11 @@ cd teams-logicapp-bot
 # Login to Azure
 azd auth login
 
-# (Optional) Configure bot metadata
-./setup-bot-config.sh  # or setup-bot-config.ps1 on Windows
+# Initialize Azure Developer CLI
+azd init
+
+# Configure bot metadata
+./setup-bot-config.sh
 
 # Deploy infrastructure and application
 azd up
@@ -63,7 +66,9 @@ teams-logicapp-bot/
 ├── templates/
 │   ├── logicapp/                 # Logic App workflow templates
 │   └── teams-app/                # Teams app manifest templates
-└── infra/                        # Azure infrastructure (Bicep)
+├── infra/                        # Azure infrastructure (Bicep)
+├── azure.yaml                    # Azure Developer CLI configuration
+└── setup-bot-config.sh           # Bot metadata configuration script
 ```
 
 ## How It Works
@@ -114,28 +119,3 @@ Modify `src/handlers/logicapp_handler.py` to change the payload structure or add
 | `MicrosoftAppType` | Bot type (usually MultiTenant) | Yes |
 | `MicrosoftAppTenantId` | Azure AD Tenant ID | Yes |
 | `LOGICAPP_ENDPOINT` | Logic App HTTP trigger URL | Yes |
-
-## Development
-
-### Running Tests
-
-```bash
-# Add your test commands here
-pytest
-```
-
-### Debugging
-
-Set logging level in `src/app.py`:
-
-```python
-logging.basicConfig(level=logging.DEBUG)
-```
-
-## License
-
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
